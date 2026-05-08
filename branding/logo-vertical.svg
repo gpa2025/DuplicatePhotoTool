@@ -1,0 +1,54 @@
+<svg viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="vGradBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f8fafc;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e2e8f0;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="vGradAccent" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d9ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0099cc;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <rect width="200" height="280" fill="url(#vGradBg)"/>
+
+  <!-- Icon -->
+  <g transform="translate(40, 20)">
+    <!-- First Photo -->
+    <rect x="0" y="0" width="60" height="60" fill="none" stroke="url(#vGradAccent)" stroke-width="3" rx="5"/>
+    <line x1="0" y1="15" x2="60" y2="15" stroke="url(#vGradAccent)" stroke-width="2"/>
+    <circle cx="18" cy="33" r="7" fill="url(#vGradAccent)"/>
+    <polygon points="48,55 60,35 60,55" fill="url(#vGradAccent)" opacity="0.8"/>
+
+    <!-- Second Photo -->
+    <rect x="22" y="22" width="60" height="60" fill="none" stroke="url(#vGradAccent)" stroke-width="3" rx="5" opacity="0.6"/>
+    <line x1="22" y1="37" x2="82" y2="37" stroke="url(#vGradAccent)" stroke-width="2" opacity="0.6"/>
+    <circle cx="40" cy="55" r="7" fill="url(#vGradAccent)" opacity="0.6"/>
+    <polygon points="70,77 82,57 82,77" fill="url(#vGradAccent)" opacity="0.4"/>
+
+    <!-- Checkmark -->
+    <g transform="translate(65, 60)">
+      <circle cx="0" cy="0" r="12" fill="#10b981"/>
+      <path d="M -5,0 L -1,4 L 6,-2" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+
+  <!-- Text -->
+  <g transform="translate(100, 120)">
+    <text x="0" y="0" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#00d9ff" letter-spacing="1" text-anchor="middle">
+      GPA SOLUTIONS
+    </text>
+    <text x="0" y="30" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#0f172a" text-anchor="middle">
+      DPT
+    </text>
+    <text x="0" y="50" font-family="Arial, sans-serif" font-size="10" fill="#64748b" text-anchor="middle">
+      Duplicate
+    </text>
+    <text x="0" y="65" font-family="Arial, sans-serif" font-size="10" fill="#64748b" text-anchor="middle">
+      Photo Tool
+    </text>
+  </g>
+
+  <!-- Accent line -->
+  <line x1="30" y1="100" x2="170" y2="100" stroke="url(#vGradAccent)" stroke-width="2"/>
+</svg>

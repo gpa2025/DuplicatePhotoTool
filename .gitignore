@@ -1,0 +1,48 @@
+# ============================
+# PowerShell Project Gitignore
+# ============================
+
+# Logs
+*.log
+*.txt
+duplicate_log.txt
+
+# CSV Reports
+*.csv
+duplicate_report.csv
+
+# Checksum Cache
+checksum_cache.json
+
+# PowerShell History
+ConsoleHost_history.txt
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Windows junk
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Build artifacts
+*.psd1
+*.psm1
+*.zip
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Scheduled task exports
+*.xml
+
+# Ignore compiled PowerShell modules (if ever added)
+bin/
+obj/
+
+# Ignore user-specific settings
+*.user
+*.suo

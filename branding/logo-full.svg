@@ -1,0 +1,58 @@
+<svg viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <defs>
+    <linearGradient id="gradientBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="gradientAccent" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d9ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0099cc;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="300" fill="url(#gradientBg)"/>
+
+  <!-- Duplicate/Photo Icon -->
+  <g transform="translate(80, 75)">
+    <!-- First Photo Frame -->
+    <rect x="0" y="0" width="70" height="70" fill="none" stroke="url(#gradientAccent)" stroke-width="3" rx="5"/>
+    <line x1="0" y1="15" x2="70" y2="15" stroke="url(#gradientAccent)" stroke-width="2"/>
+    <circle cx="20" cy="35" r="8" fill="url(#gradientAccent)"/>
+    <polygon points="50,55 70,30 70,55" fill="url(#gradientAccent)" opacity="0.8"/>
+
+    <!-- Second Photo Frame (overlapped) -->
+    <rect x="25" y="25" width="70" height="70" fill="none" stroke="url(#gradientAccent)" stroke-width="3" rx="5" opacity="0.7"/>
+    <line x1="25" y1="40" x2="95" y2="40" stroke="url(#gradientAccent)" stroke-width="2" opacity="0.7"/>
+    <circle cx="45" cy="60" r="8" fill="url(#gradientAccent)" opacity="0.7"/>
+    <polygon points="75,80 95,55 95,80" fill="url(#gradientAccent)" opacity="0.5"/>
+
+    <!-- Checkmark overlay -->
+    <g transform="translate(60, 55)">
+      <circle cx="0" cy="0" r="12" fill="#10b981" opacity="0.9"/>
+      <path d="M -5,0 L -1,4 L 5,-2" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+
+  <!-- Text Section -->
+  <g transform="translate(200, 80)">
+    <!-- Company Name -->
+    <text x="0" y="0" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#00d9ff" letter-spacing="2">
+      GPA SOLUTIONS
+    </text>
+
+    <!-- Product Name -->
+    <text x="0" y="45" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="white" letter-spacing="1">
+      Duplicate Photo Tool
+    </text>
+
+    <!-- Tagline -->
+    <text x="0" y="75" font-family="Arial, sans-serif" font-size="14" fill="#94a3b8" letter-spacing="0.5">
+      Fast • Multi-threaded • Intelligent
+    </text>
+  </g>
+
+  <!-- Bottom accent line -->
+  <line x1="200" y1="280" x2="750" y2="280" stroke="url(#gradientAccent)" stroke-width="2"/>
+</svg>
