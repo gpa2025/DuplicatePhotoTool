@@ -191,9 +191,23 @@ $Report = @()
 
 foreach ($Group in $Groups) {
 
-    $Original = $Group.Group[0].Path
+    # Sort group by path for deterministic original selection
+    # Prefer files inside $Source over files inside $DuplicateRoot
+    $sorted = $Group.Group | Sort-Object {
+        $p = $_.Path
+        # Files inside DuplicateRoot are always duplicates, never originals
+        if ($p.StartsWith($DuplicateRoot, [System.StringComparison]::OrdinalIgnoreCase)) { 1 } else { 0 }
+    }, { $_.Path }
 
-    $Duplicates = $Group.Group | Where-Object { $_.Path -ne $Original }
+    $Original = $sorted[0].Path
+
+    # Safety check — original must be inside Source, not DuplicateRoot
+    if ($Original.StartsWith($DuplicateRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        Write-Log "WARNING: All copies of hash $($Group.Name) are in DuplicateRoot — skipping group." "WARN"
+        continue
+    }
+
+    $Duplicates = $sorted | Select-Object -Skip 1
 
     foreach ($Dup in $Duplicates) {
 
