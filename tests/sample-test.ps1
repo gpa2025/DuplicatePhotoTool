@@ -144,7 +144,7 @@ Set-Content (Join-Path $env6.Source "img.jpg") "data"
 
 & $MainScript -Source $env6.Source -DuplicateRoot $env6.Duplicates -DryRun | Out-Null
 
-Assert "Cache file exists" (Test-Path (Join-Path $env6.Duplicates "checksum_cache.db"))
+Assert "Cache file exists" (Test-Path (Join-Path (Split-Path $MainScript) "checksum_cache.db"))
 
 Remove-TestEnv $env6
 

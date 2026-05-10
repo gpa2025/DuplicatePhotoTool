@@ -13,8 +13,8 @@ A fast, multi-threaded PowerShell-based duplicate photo detection and cleanup to
 ### 🔍 Parallel SHA256 Hashing
 Uses PowerShell 7 `ForEach-Object -Parallel` with batched processing across up to 16 CPU cores for maximum throughput on large photo libraries.
 
-### ⚡ Checksum Cache
-Stores file metadata + hash in `checksum_cache.json` inside the duplicate output folder. Unchanged files are skipped on re-scans — no re-hashing needed.
+### ⚡ LiteDB Index Database
+Stores file metadata + hash in `src\checksum_cache.db` (LiteDB) alongside the script. Unchanged files are skipped on re-scans — no re-hashing needed. Includes a `scan_history` collection tracking every scan run. Open with [LiteDB Studio](https://github.com/mbdavid/LiteDB.Studio/releases) to browse and query.
 
 ### 🛡 Safe Duplicate Detection
 Only exact SHA256 duplicates are moved. The original file is always kept in place. Every move is logged with the original file location.
@@ -23,7 +23,7 @@ Only exact SHA256 duplicates are moved. The original file is always kept in plac
 Duplicates are moved into a mirrored directory tree under your chosen output folder.
 
 ### 📊 CSV Report + Scan Log
-Every duplicate move is recorded in `duplicate_report.csv` with original path, duplicate path, destination, and hash. A full `scan_log.txt` is also written to the output folder and viewable directly from the GUI.
+Every duplicate move is recorded in `duplicate_report.csv` with original path, duplicate path, destination, and hash. A timestamped `scan_log_YYYY-MM-DD_HH-mm-ss.txt` is written to the output folder and viewable directly from the GUI.
 
 ### ⏱ Scan Timer
 Elapsed time is logged at the end of every scan with a summary of duplicate groups found and files processed.
@@ -63,6 +63,8 @@ DuplicatePhotoTool/
 │   └── sample-test.ps1
 ├── tools/
 │   └── Update-Version.ps1
+├── lib/
+│   └── LiteDB.dll
 ├── Setup-DPT.ps1
 ├── Uninstall-DPT.ps1
 ├── README.md
@@ -77,6 +79,7 @@ DuplicatePhotoTool/
 
 - **PowerShell 7+**
 - **Windows 10/11**
+- **LiteDB.dll** — place in `lib\` folder (download from [nuget.org/packages/LiteDB](https://www.nuget.org/packages/LiteDB))
 - Git (optional)
 
 ---

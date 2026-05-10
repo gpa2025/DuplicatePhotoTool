@@ -90,7 +90,7 @@ Add-Type -Path $LibPath
 # Open Database
 # ============================
 
-$DbPath  = Join-Path $DuplicateRoot "checksum_cache.db"
+$DbPath  = Join-Path $PSScriptRoot "checksum_cache.db"
 $db      = [LiteDB.LiteDatabase]::new("Filename=$DbPath;Connection=shared")
 $colFiles = $db.GetCollection[LiteDB.BsonDocument]("files")
 $colScans = $db.GetCollection[LiteDB.BsonDocument]("scan_history")
