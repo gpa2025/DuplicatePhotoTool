@@ -128,11 +128,23 @@ $Splash.Close()
             <CheckBox Name="DryRun" Grid.Row="4" Margin="0,0,0,14"
                       Content="Dry Run — preview only, no files will be moved"/>
 
-            <!-- Run Button -->
-            <Button Name="RunButton" Grid.Row="5" Content="▶  Run Scan"
-                    Height="44" VerticalAlignment="Top"
-                    Background="#0078D7" Foreground="White"
-                    BorderThickness="0" FontSize="15" FontWeight="SemiBold"/>
+            <!-- Run Button + Timer -->
+            <Grid Grid.Row="5" VerticalAlignment="Top">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Button Name="RunButton" Grid.Column="0" Content="▶  Run Scan"
+                        Height="44" Background="#0078D7" Foreground="White"
+                        BorderThickness="0" FontSize="15" FontWeight="SemiBold"/>
+                <Border Grid.Column="1" Background="#1e293b" BorderBrush="#334155"
+                        BorderThickness="1" CornerRadius="4" Margin="10,0,0,0" Padding="12,0">
+                    <TextBlock Name="TimerLabel" Text="00:00" Foreground="#00d9ff"
+                               FontSize="20" FontFamily="Consolas" FontWeight="Bold"
+                               VerticalAlignment="Center" HorizontalAlignment="Center"
+                               MinWidth="70" TextAlignment="Center"/>
+                </Border>
+            </Grid>
         </Grid>
 
         <!-- Status Bar -->
@@ -159,6 +171,7 @@ $BrowseSource    = $Window.FindName("BrowseSource")
 $BrowseDuplicate = $Window.FindName("BrowseDuplicate")
 $DryRunCheck     = $Window.FindName("DryRun")
 $RunButton       = $Window.FindName("RunButton")
+$TimerLabel      = $Window.FindName("TimerLabel")
 $StatusBar       = $Window.FindName("StatusBar")
 
 # ============================
@@ -275,11 +288,22 @@ $RunButton.Add_Click({
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     $process = Start-Process pwsh -ArgumentList $args -PassThru
 
+    $RunButton.IsEnabled = $false
+    $TimerLabel.Foreground = "#00d9ff"
     $StatusBar.Text = "⏱ Scan running..."
-    $Window.Dispatcher.Invoke([action]{}, [System.Windows.Threading.DispatcherPriority]::Background)
 
-    # Wait async so UI stays responsive
+    # DispatcherTimer ticks every second to update the MM:SS label
+    $dispatcherTimer = New-Object System.Windows.Threading.DispatcherTimer
+    $dispatcherTimer.Interval = [TimeSpan]::FromSeconds(1)
+    $dispatcherTimer.Add_Tick({
+        $e = $stopwatch.Elapsed
+        $TimerLabel.Text = "{0:D2}:{1:D2}" -f [int]$e.TotalMinutes, $e.Seconds
+    })
+    $dispatcherTimer.Start()
+
+    # Watch for process exit async
     $null = Register-ObjectEvent -InputObject $process -EventName Exited -Action {
+        $dispatcherTimer.Stop()
         $elapsed = $stopwatch.Elapsed
         $elapsedStr = if ($elapsed.TotalMinutes -ge 1) {
             "{0}m {1}s" -f [int]$elapsed.TotalMinutes, $elapsed.Seconds
@@ -287,9 +311,11 @@ $RunButton.Add_Click({
             "{0:N1}s" -f $elapsed.TotalSeconds
         }
         $Window.Dispatcher.Invoke([action]{
+            $TimerLabel.Foreground = "#10b981"
+            $RunButton.IsEnabled = $true
             $StatusBar.Text = "✔ Scan completed in $elapsedStr. Check the output folder and CSV report."
         })
-    } -MessageData @{ Stopwatch = $stopwatch; Window = $Window; StatusBar = $StatusBar }
+    } -MessageData @{ Timer = $dispatcherTimer; Stopwatch = $stopwatch; Window = $Window; StatusBar = $StatusBar; RunButton = $RunButton; TimerLabel = $TimerLabel }
 })
 
 # ============================
