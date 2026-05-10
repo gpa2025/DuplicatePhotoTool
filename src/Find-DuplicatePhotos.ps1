@@ -76,17 +76,25 @@ function Write-Log {
 $Timer = [System.Diagnostics.Stopwatch]::StartNew()
 
 # ============================
-# Load or Create Checksum Cache
+# Load LiteDB
 # ============================
 
-$CachePath = Join-Path $DuplicateRoot "checksum_cache.json"
-
-if (Test-Path $CachePath) {
-    Write-Log "Loading checksum cache..." "INFO"
-    $ChecksumCache = Get-Content $CachePath | ConvertFrom-Json -AsHashtable
-} else {
-    $ChecksumCache = @{}
+$LibPath = Join-Path $PSScriptRoot "..\lib\LiteDB.dll"
+if (-not (Test-Path $LibPath)) {
+    Write-Error "LiteDB.dll not found at $LibPath. Please place LiteDB.dll in the lib\ folder."
+    exit 1
 }
+Add-Type -Path $LibPath
+
+# ============================
+# Open Database
+# ============================
+
+$DbPath  = Join-Path $DuplicateRoot "checksum_cache.db"
+$db      = [LiteDB.LiteDatabase]::new("Filename=$DbPath;Connection=shared")
+$colFiles = $db.GetCollection[LiteDB.BsonDocument]("files")
+$colScans = $db.GetCollection[LiteDB.BsonDocument]("scan_history")
+$colFiles.EnsureIndex("path")  # index on path for fast lookups
 
 # ============================
 # Scan Files
@@ -102,8 +110,21 @@ Write-Log "Found $($Files.Count) files." "INFO"
 # Compute Hashes (parallel with caching)
 # ============================
 
-# Snapshot cache for read-only use inside parallel blocks
-$CacheSnapshot = $ChecksumCache
+# ============================
+# Build cache snapshot from DB
+# ============================
+
+Write-Log "Loading index database..." "INFO"
+$CacheSnapshot = @{}
+$allDocs = $colFiles.FindAll()
+foreach ($doc in $allDocs) {
+    $CacheSnapshot[$doc["path"].AsString] = @{
+        Hash          = $doc["hash"].AsString
+        LastWriteTime = $doc["lastWriteTime"].AsString
+        Length        = $doc["length"].AsInt64
+    }
+}
+Write-Log "Index loaded: $($CacheSnapshot.Count) entries." "INFO"
 
 Write-Log "Using $ThrottleLimit core(s) for hashing." "INFO"
 
@@ -160,20 +181,20 @@ $cached = ($HashResults | Where-Object { $_.CacheHit }).Count
 $hashed = ($HashResults | Where-Object { -not $_.CacheHit }).Count
 Write-Log "Hashing complete: $hashed hashed, $cached from cache." "INFO"
 
-# Update cache with any new/changed hashes and log newly hashed files
+# Update DB with new/changed hashes
+$db.BeginTrans() | Out-Null
 foreach ($result in $HashResults) {
     if (-not $result.CacheHit) {
         Write-Log "Hashed: $($result.Path)" "INFO"
-        $ChecksumCache[$result.Path] = @{
-            Hash          = $result.Hash
-            LastWriteTime = $result.LastWriteTime
-            Length        = $result.Length
-        }
+        $doc = [LiteDB.BsonDocument]::new()
+        $doc["path"]          = [LiteDB.BsonValue]::new($result.Path)
+        $doc["hash"]          = [LiteDB.BsonValue]::new($result.Hash)
+        $doc["lastWriteTime"] = [LiteDB.BsonValue]::new($result.LastWriteTime)
+        $doc["length"]        = [LiteDB.BsonValue]::new([long]$result.Length)
+        $colFiles.Upsert($doc) | Out-Null
     }
 }
-
-# Save cache
-$ChecksumCache | ConvertTo-Json -Depth 3 | Set-Content $CachePath
+$db.Commit() | Out-Null
 
 # ============================
 # Group by Hash
@@ -257,5 +278,18 @@ $elapsedStr = if ($elapsed.TotalMinutes -ge 1) {
 } else {
     "{0:N1}s" -f $elapsed.TotalSeconds
 }
+
+# Save scan history to DB
+$scanDoc = [LiteDB.BsonDocument]::new()
+$scanDoc["scanDate"]       = [LiteDB.BsonValue]::new((Get-Date).ToString("yyyy-MM-dd HH:mm:ss"))
+$scanDoc["source"]         = [LiteDB.BsonValue]::new($Source)
+$scanDoc["filesFound"]     = [LiteDB.BsonValue]::new([int]$Files.Count)
+$scanDoc["duplicateGroups"]= [LiteDB.BsonValue]::new([int]$Groups.Count)
+$scanDoc["filesMoved"]     = [LiteDB.BsonValue]::new([int]$Report.Count)
+$scanDoc["elapsedSeconds"] = [LiteDB.BsonValue]::new([double]$elapsed.TotalSeconds)
+$scanDoc["dryRun"]         = [LiteDB.BsonValue]::new([bool]$DryRun)
+$colScans.Insert($scanDoc) | Out-Null
+
+$db.Dispose()
 
 Write-Log "Scan complete in $elapsedStr. $($Groups.Count) duplicate group(s) found, $($Report.Count) file(s) processed." "INFO"

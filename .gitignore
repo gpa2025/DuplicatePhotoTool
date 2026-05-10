@@ -13,6 +13,11 @@ duplicate_report.csv
 
 # Checksum Cache
 checksum_cache.json
+checksum_cache.db
+checksum_cache.db-log
+
+# LiteDB binary (ship separately)
+lib/LiteDB.dll
 
 # PowerShell History
 ConsoleHost_history.txt
