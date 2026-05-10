@@ -124,9 +124,22 @@ $Splash.Close()
                 <Button Name="BrowseDuplicate" Width="80" Content="Browse"/>
             </StackPanel>
 
-            <!-- Dry Run -->
-            <CheckBox Name="DryRun" Grid.Row="4" Margin="0,0,0,14"
-                      Content="Dry Run — preview only, no files will be moved"/>
+            <!-- Dry Run + Cores -->
+            <Grid Grid.Row="4" Margin="0,0,0,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <CheckBox Name="DryRun" Grid.Column="0" VerticalAlignment="Center"
+                          Content="Dry Run — preview only, no files will be moved"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Cores:" Foreground="#94a3b8" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <Slider Name="CoresSlider" Minimum="1" Maximum="16" Value="16"
+                            Width="120" VerticalAlignment="Center" IsSnapToTickEnabled="True" TickFrequency="1"/>
+                    <TextBlock Name="CoresLabel" Text="16" Foreground="#00d9ff" FontSize="13" FontWeight="Bold"
+                               FontFamily="Consolas" VerticalAlignment="Center" Margin="8,0,0,0" MinWidth="24"/>
+                </StackPanel>
+            </Grid>
 
             <!-- Run Button + Timer -->
             <Grid Grid.Row="5" VerticalAlignment="Top">
@@ -170,6 +183,8 @@ $DuplicateBox    = $Window.FindName("DuplicateBox")
 $BrowseSource    = $Window.FindName("BrowseSource")
 $BrowseDuplicate = $Window.FindName("BrowseDuplicate")
 $DryRunCheck     = $Window.FindName("DryRun")
+$CoresSlider     = $Window.FindName("CoresSlider")
+$CoresLabel      = $Window.FindName("CoresLabel")
 $RunButton       = $Window.FindName("RunButton")
 $TimerLabel      = $Window.FindName("TimerLabel")
 $StatusBar       = $Window.FindName("StatusBar")
@@ -177,6 +192,11 @@ $script:RunButton   = $RunButton
 $script:TimerLabel  = $TimerLabel
 $script:StatusBar   = $StatusBar
 $script:Window      = $Window
+
+# Update cores label as slider moves
+$CoresSlider.Add_ValueChanged({
+    $CoresLabel.Text = [int]$CoresSlider.Value
+})
 
 # ============================
 # Folder Browser
@@ -227,6 +247,13 @@ $DryRunCheck.Add_MouseEnter({
     $StatusBar.Text = "Dry Run: Simulates the scan and shows what would be moved — no files are actually touched."
 })
 $DryRunCheck.Add_MouseLeave({
+    $StatusBar.Text = "Ready."
+})
+
+$CoresSlider.Add_MouseEnter({
+    $StatusBar.Text = "Cores: Number of CPU cores to use for parallel hashing. More cores = faster scan. This machine has 16 cores."
+})
+$CoresSlider.Add_MouseLeave({
     $StatusBar.Text = "Ready."
 })
 
@@ -286,7 +313,8 @@ $RunButton.Add_Click({
     $script = Join-Path $PSScriptRoot "Find-DuplicatePhotos.ps1"
     $dryRunArg = if ($DryRunCheck.IsChecked) { '"-DryRun"' } else { "" }
 
-    $args = @("-NoLogo", "-File `"$script`"", "-Source `"$src`"", "-DuplicateRoot `"$dup`"")
+    $cores = [int]$CoresSlider.Value
+    $args = @("-NoLogo", "-File `"$script`"", "-Source `"$src`"", "-DuplicateRoot `"$dup`"", "-ThrottleLimit $cores")
     if ($DryRunCheck.IsChecked) { $args += "-DryRun" }
 
     $script:stopwatch = [System.Diagnostics.Stopwatch]::StartNew()

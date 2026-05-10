@@ -32,6 +32,9 @@ param(
 
     [switch]$DryRun,
 
+    [ValidateRange(1,16)]
+    [int]$ThrottleLimit = 16,
+
     [ValidateSet("INFO","WARN","ERROR")]
     [string]$LogLevel = "INFO"
 )
@@ -92,18 +95,22 @@ $Files = Get-ChildItem -Path $Source -Recurse -File -ErrorAction SilentlyContinu
 Write-Log "Found $($Files.Count) files." "INFO"
 
 # ============================
-# Compute Hashes (with caching)
+# Compute Hashes (parallel with caching)
 # ============================
 
-$HashResults = [System.Collections.Generic.List[PSCustomObject]]::new()
+# Snapshot cache for read-only use inside parallel blocks
+$CacheSnapshot = $ChecksumCache
 
-foreach ($File in $Files) {
+Write-Log "Using $ThrottleLimit core(s) for hashing." "INFO"
 
-    $key = $File.FullName
-    $hash = $null
+$HashResults = $Files | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
+    $File  = $_
+    $cache = $using:CacheSnapshot
+    $key   = $File.FullName
+    $hash  = $null
 
-    if ($ChecksumCache.ContainsKey($key)) {
-        $entry = $ChecksumCache[$key]
+    if ($cache.ContainsKey($key)) {
+        $entry = $cache[$key]
         if ($entry.LastWriteTime -eq $File.LastWriteTimeUtc.ToString() -and
             $entry.Length -eq $File.Length) {
             $hash = $entry.Hash
@@ -111,20 +118,32 @@ foreach ($File in $Files) {
     }
 
     if (-not $hash) {
-        Write-Log "Hashing: $($File.FullName)" "INFO"
         $hash = (Get-FileHash -Path $File.FullName -Algorithm SHA256).Hash
-        $ChecksumCache[$key] = @{
-            Hash          = $hash
-            LastWriteTime = $File.LastWriteTimeUtc.ToString()
-            Length        = $File.Length
-        }
     }
 
-    $HashResults.Add([PSCustomObject]@{ Path = $File.FullName; Hash = $hash })
+    [PSCustomObject]@{
+        Path          = $File.FullName
+        Hash          = $hash
+        LastWriteTime = $File.LastWriteTimeUtc.ToString()
+        Length        = $File.Length
+        CacheHit      = ($null -ne ($cache[$key]) -and $cache[$key].Hash -eq $hash)
+    }
+}
+
+# Update cache with any new/changed hashes and log newly hashed files
+foreach ($result in $HashResults) {
+    if (-not $result.CacheHit) {
+        Write-Log "Hashed: $($result.Path)" "INFO"
+        $ChecksumCache[$result.Path] = @{
+            Hash          = $result.Hash
+            LastWriteTime = $result.LastWriteTime
+            Length        = $result.Length
+        }
+    }
 }
 
 # Save cache
-$ChecksumCache | ConvertTo-Json | Set-Content $CachePath
+$ChecksumCache | ConvertTo-Json -Depth 3 | Set-Content $CachePath
 
 # ============================
 # Group by Hash
