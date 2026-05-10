@@ -13,12 +13,6 @@
 .PARAMETER DuplicateRoot
     The folder where duplicates will be moved.
 
-.PARAMETER SelectionMode
-    Determines which file to keep:
-        - First   : Keep the first file encountered
-        - Newest  : Keep the file with the latest LastWriteTime
-        - Largest : Keep the file with the largest file size
-
 .PARAMETER DryRun
     If set, no files will be moved.
 
@@ -35,9 +29,6 @@ param(
 
     [Parameter(Mandatory=$true)]
     [string]$DuplicateRoot,
-
-    [ValidateSet("First","Newest","Largest")]
-    [string]$SelectionMode = "First",
 
     [switch]$DryRun,
 
@@ -145,12 +136,7 @@ $Report = @()
 
 foreach ($Group in $Groups) {
 
-    # Determine original based on selection mode
-    switch ($SelectionMode) {
-        "First"   { $Original = $Group.Group[0].Path }
-        "Newest"  { $Original = ($Group.Group | Sort-Object { (Get-Item $_.Path).LastWriteTime } -Descending)[0].Path }
-        "Largest" { $Original = ($Group.Group | Sort-Object { (Get-Item $_.Path).Length } -Descending)[0].Path }
-    }
+    $Original = $Group.Group[0].Path
 
     $Duplicates = $Group.Group | Where-Object { $_.Path -ne $Original }
 

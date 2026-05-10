@@ -18,16 +18,12 @@
 .PARAMETER Time
     Time of day to run the task (HH:mm)
 
-.PARAMETER SelectionMode
-    First | Newest | Largest
-
 .EXAMPLE
     .\Register-DuplicatePhotoScanTask.ps1 `
         -ScriptPath "D:\GitRepo\DuplicatePhotoTool\src\Find-DuplicatePhotos.ps1" `
         -Source "D:\Pictures" `
         -DuplicateRoot "D:\Duplicates" `
-        -Time "02:00" `
-        -SelectionMode Newest
+        -Time "02:00"
 #>
 
 param(
@@ -41,10 +37,7 @@ param(
     [string]$DuplicateRoot,
 
     [Parameter(Mandatory=$true)]
-    [string]$Time,
-
-    [ValidateSet("First","Newest","Largest")]
-    [string]$SelectionMode = "First"
+    [string]$Time
 )
 
 # ============================
@@ -70,9 +63,7 @@ if (-not (Test-Path $DuplicateRoot)) {
 # Build Task Action
 # ============================
 
-$Action = New-ScheduledTaskAction -Execute "pwsh.exe" -Argument @"
--NoLogo -File `"$ScriptPath`" -Source `"$Source`" -DuplicateRoot `"$DuplicateRoot`" -SelectionMode $SelectionMode
-"@
+$Action = New-ScheduledTaskAction -Execute "pwsh.exe" -Argument "-ExecutionPolicy Bypass -File `"$ScriptPath`" -Source `"$Source`" -DuplicateRoot `"$DuplicateRoot`""
 
 # ============================
 # Build Trigger

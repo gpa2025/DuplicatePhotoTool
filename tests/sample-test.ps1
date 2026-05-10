@@ -80,45 +80,38 @@ Assert "DryRun: source files intact" ((Get-ChildItem $env2.Source -File).Count -
 Remove-TestEnv $env2
 
 # ============================
-# Test 3: SelectionMode Newest keeps latest file
+# Test 3: First file is always kept
 # ============================
 
-Write-Host "`n--- Test 3: SelectionMode Newest ---" -ForegroundColor Cyan
+Write-Host "`n--- Test 3: First file encountered is kept ---" -ForegroundColor Cyan
 $env3 = New-TestEnv
 
-$older  = Join-Path $env3.Source "older.jpg"
-$newer  = Join-Path $env3.Source "newer.jpg"
-Set-Content $older "same-content"
-Set-Content $newer "same-content"
-(Get-Item $older).LastWriteTime = (Get-Date).AddDays(-10)
-(Get-Item $newer).LastWriteTime = (Get-Date)
+$first  = Join-Path $env3.Source "aaa_first.jpg"
+$second = Join-Path $env3.Source "zzz_second.jpg"
+Set-Content $first  "same-content" -NoNewline
+Set-Content $second "same-content" -NoNewline
 
-& $MainScript -Source $env3.Source -DuplicateRoot $env3.Duplicates -SelectionMode Newest -DryRun | Out-Null
+& $MainScript -Source $env3.Source -DuplicateRoot $env3.Duplicates -DryRun | Out-Null
 
 $csv3 = Import-Csv (Join-Path $env3.Duplicates "duplicate_report.csv")
-Assert "Newest: older file is the duplicate" ($csv3[0].Duplicate -like "*older.jpg")
-Assert "Newest: newer file is the original"  ($csv3[0].Original  -like "*newer.jpg")
+Assert "First kept: second file is the duplicate" ($csv3[0].Duplicate -like "*zzz_second.jpg")
+Assert "First kept: first file is the original"   ($csv3[0].Original  -like "*aaa_first.jpg")
 
 Remove-TestEnv $env3
 
 # ============================
-# Test 4: SelectionMode Largest keeps biggest file
+# Test 4: Log includes original path
 # ============================
 
-Write-Host "`n--- Test 4: SelectionMode Largest ---" -ForegroundColor Cyan
+Write-Host "`n--- Test 4: Log includes original path ---" -ForegroundColor Cyan
 $env4 = New-TestEnv
 
-$small = Join-Path $env4.Source "small.jpg"
-$large = Join-Path $env4.Source "large.jpg"
-$sharedContent = "A" * 500
-Set-Content $small $sharedContent -NoNewline
-Set-Content $large $sharedContent -NoNewline
+Set-Content (Join-Path $env4.Source "copy1.jpg") "data" -NoNewline
+Set-Content (Join-Path $env4.Source "copy2.jpg") "data" -NoNewline
 
-& $MainScript -Source $env4.Source -DuplicateRoot $env4.Duplicates -SelectionMode Largest -DryRun | Out-Null
-
+& $MainScript -Source $env4.Source -DuplicateRoot $env4.Duplicates -DryRun | Out-Null
 $csv4 = Import-Csv (Join-Path $env4.Duplicates "duplicate_report.csv")
-Assert "Largest: smaller file is the duplicate" ($csv4[0].Duplicate -like "*small.jpg")
-Assert "Largest: larger file is the original"   ($csv4[0].Original  -like "*large.jpg")
+Assert "Log shows original path" ($csv4[0].Original -like "*copy1.jpg")
 
 Remove-TestEnv $env4
 

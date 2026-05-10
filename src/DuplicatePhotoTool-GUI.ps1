@@ -33,14 +33,10 @@ Add-Type -AssemblyName System.Windows.Forms
             <Button Name="BrowseDuplicate" Width="80" Content="Browse"/>
         </StackPanel>
 
-        <!-- Selection Mode -->
-        <StackPanel Grid.Row="4" Margin="0,10,0,10">
-            <TextBlock Text="Selection Mode:"/>
-            <ComboBox Name="SelectionMode" Width="200">
-                <ComboBoxItem Content="First" IsSelected="True"/>
-                <ComboBoxItem Content="Newest"/>
-                <ComboBoxItem Content="Largest"/>
-            </ComboBox>
+        <!-- Dry Run -->
+        <StackPanel Grid.Row="4" Margin="0,10,0,10" Orientation="Horizontal">
+            <CheckBox Name="DryRun" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <TextBlock Text="Dry Run (preview only, no files moved)" VerticalAlignment="Center"/>
         </StackPanel>
 
         <!-- Run Button -->
@@ -61,7 +57,7 @@ $SourceBox      = $Window.FindName("SourceBox")
 $DuplicateBox   = $Window.FindName("DuplicateBox")
 $BrowseSource   = $Window.FindName("BrowseSource")
 $BrowseDuplicate= $Window.FindName("BrowseDuplicate")
-$SelectionMode  = $Window.FindName("SelectionMode")
+$DryRunCheck    = $Window.FindName("DryRun")
 $RunButton      = $Window.FindName("RunButton")
 
 # ============================
@@ -95,8 +91,6 @@ $RunButton.Add_Click({
 
     $src = $SourceBox.Text
     $dup = $DuplicateBox.Text
-    $mode = $SelectionMode.SelectedItem.Content
-
     if (-not (Test-Path $src)) {
         [System.Windows.MessageBox]::Show("Source folder does not exist.")
         return
@@ -112,8 +106,7 @@ $RunButton.Add_Click({
         "-NoLogo",
         "-File `"$script`"",
         "-Source `"$src`"",
-        "-DuplicateRoot `"$dup`"",
-        "-SelectionMode $mode"
+        "-DuplicateRoot `"$dup`""$(if ($DryRunCheck.IsChecked) { ", `"-DryRun`"" })
     )
 
     [System.Windows.MessageBox]::Show("Scan started in a new PowerShell window.")
