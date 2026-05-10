@@ -173,6 +173,10 @@ $DryRunCheck     = $Window.FindName("DryRun")
 $RunButton       = $Window.FindName("RunButton")
 $TimerLabel      = $Window.FindName("TimerLabel")
 $StatusBar       = $Window.FindName("StatusBar")
+$script:RunButton   = $RunButton
+$script:TimerLabel  = $TimerLabel
+$script:StatusBar   = $StatusBar
+$script:Window      = $Window
 
 # ============================
 # Folder Browser
@@ -285,37 +289,37 @@ $RunButton.Add_Click({
     $args = @("-NoLogo", "-File `"$script`"", "-Source `"$src`"", "-DuplicateRoot `"$dup`"")
     if ($DryRunCheck.IsChecked) { $args += "-DryRun" }
 
-    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $script:stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     $process = Start-Process pwsh -ArgumentList $args -PassThru
 
-    $RunButton.IsEnabled = $false
-    $TimerLabel.Foreground = "#00d9ff"
-    $StatusBar.Text = "⏱ Scan running..."
+    $script:RunButton.IsEnabled = $false
+    $script:TimerLabel.Foreground = "#00d9ff"
+    $script:StatusBar.Text = "⏱ Scan running..."
 
     # DispatcherTimer ticks every second to update the MM:SS label
-    $dispatcherTimer = New-Object System.Windows.Threading.DispatcherTimer
-    $dispatcherTimer.Interval = [TimeSpan]::FromSeconds(1)
-    $dispatcherTimer.Add_Tick({
-        $e = $stopwatch.Elapsed
-        $TimerLabel.Text = "{0:D2}:{1:D2}" -f [int]$e.TotalMinutes, $e.Seconds
+    $script:dispatcherTimer = New-Object System.Windows.Threading.DispatcherTimer
+    $script:dispatcherTimer.Interval = [TimeSpan]::FromSeconds(1)
+    $script:dispatcherTimer.Add_Tick({
+        $e = $script:stopwatch.Elapsed
+        $script:TimerLabel.Text = "{0:D2}:{1:D2}" -f [int]$e.TotalMinutes, $e.Seconds
     })
-    $dispatcherTimer.Start()
+    $script:dispatcherTimer.Start()
 
     # Watch for process exit async
     $null = Register-ObjectEvent -InputObject $process -EventName Exited -Action {
-        $dispatcherTimer.Stop()
-        $elapsed = $stopwatch.Elapsed
+        $script:dispatcherTimer.Stop()
+        $elapsed = $script:stopwatch.Elapsed
         $elapsedStr = if ($elapsed.TotalMinutes -ge 1) {
             "{0}m {1}s" -f [int]$elapsed.TotalMinutes, $elapsed.Seconds
         } else {
             "{0:N1}s" -f $elapsed.TotalSeconds
         }
-        $Window.Dispatcher.Invoke([action]{
-            $TimerLabel.Foreground = "#10b981"
-            $RunButton.IsEnabled = $true
-            $StatusBar.Text = "✔ Scan completed in $elapsedStr. Check the output folder and CSV report."
+        $script:Window.Dispatcher.Invoke([action]{
+            $script:TimerLabel.Foreground = "#10b981"
+            $script:RunButton.IsEnabled = $true
+            $script:StatusBar.Text = "✔ Scan completed in $elapsedStr. Check the output folder and CSV report."
         })
-    } -MessageData @{ Timer = $dispatcherTimer; Stopwatch = $stopwatch; Window = $Window; StatusBar = $StatusBar; RunButton = $RunButton; TimerLabel = $TimerLabel }
+    }
 })
 
 # ============================
