@@ -33,7 +33,7 @@ param(
     [switch]$DryRun,
 
     [ValidateRange(1,16)]
-    [int]$ThrottleLimit = 16,
+    [int]$ThrottleLimit = 4,
 
     [ValidateSet("INFO","WARN","ERROR")]
     [string]$LogLevel = "INFO"

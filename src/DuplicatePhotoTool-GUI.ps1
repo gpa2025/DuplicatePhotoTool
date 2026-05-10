@@ -140,9 +140,9 @@ $splashTimer.Start()
                           Content="Dry Run — preview only, no files will be moved"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Cores:" Foreground="#94a3b8" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <Slider Name="CoresSlider" Minimum="1" Maximum="16" Value="16"
+                    <Slider Name="CoresSlider" Minimum="1" Maximum="16" Value="4"
                             Width="120" VerticalAlignment="Center" IsSnapToTickEnabled="True" TickFrequency="1"/>
-                    <TextBlock Name="CoresLabel" Text="16" Foreground="#00d9ff" FontSize="13" FontWeight="Bold"
+                    <TextBlock Name="CoresLabel" Text="4" Foreground="#00d9ff" FontSize="13" FontWeight="Bold"
                                FontFamily="Consolas" VerticalAlignment="Center" Margin="8,0,0,0" MinWidth="24"/>
                 </StackPanel>
             </Grid>
@@ -261,7 +261,7 @@ $DryRunCheck.Add_MouseLeave({
 })
 
 $CoresSlider.Add_MouseEnter({
-    $StatusBar.Text = "Cores: Number of CPU cores to use for parallel hashing. More cores = faster scan. This machine has 16 cores."
+    $StatusBar.Text = "Cores: Number of CPU cores for hashing. Use 2-4 for HDD, up to 16 for SSD. Changes take effect on the next scan."
 })
 $CoresSlider.Add_MouseLeave({
     $StatusBar.Text = "Ready."
@@ -378,6 +378,7 @@ $RunButton.Add_Click({
     $process = Start-Process pwsh -ArgumentList $args -PassThru
 
     $script:RunButton.IsEnabled = $false
+    $CoresSlider.IsEnabled = $false
     $script:TimerLabel.Foreground = "#00d9ff"
     $script:StatusBar.Text = "⏱ Scan running..."
 
@@ -402,6 +403,7 @@ $RunButton.Add_Click({
         $script:Window.Dispatcher.Invoke([action]{
             $script:TimerLabel.Foreground = "#10b981"
             $script:RunButton.IsEnabled = $true
+            $CoresSlider.IsEnabled = $true
             $script:StatusBar.Text = "✔ Scan completed in $elapsedStr. Check the output folder and CSV report."
         })
     }
