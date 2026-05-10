@@ -115,9 +115,15 @@ for ($i = 0; $i -lt $Files.Count; $i += $batchSize) {
     $batches.Add($Files[$i..$end])
 }
 
+$script:batchNum = 0
+$totalBatches = $batches.Count
+
 $HashResults = $batches | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
-    $cache = $using:CacheSnapshot
-    foreach ($File in $_) {
+    $cache      = $using:CacheSnapshot
+    $results    = [System.Collections.Generic.List[PSCustomObject]]::new()
+    $batchFiles = $_
+
+    foreach ($File in $batchFiles) {
         $key  = $File.FullName
         $hash = $null
 
@@ -133,15 +139,26 @@ $HashResults = $batches | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel
             $hash = (Get-FileHash -Path $File.FullName -Algorithm SHA256).Hash
         }
 
-        [PSCustomObject]@{
+        $results.Add([PSCustomObject]@{
             Path          = $File.FullName
             Hash          = $hash
             LastWriteTime = $File.LastWriteTimeUtc.ToString()
             Length        = $File.Length
             CacheHit      = ($null -ne $cache[$key] -and $cache[$key].Hash -eq $hash)
-        }
+        })
     }
+
+    # Report batch completion
+    $done = [System.Threading.Interlocked]::Increment([ref]$using:script:batchNum)
+    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [INFO] Batch $done/$($using:totalBatches) complete ($($batchFiles.Count) files)." -ForegroundColor Green
+
+    $results
 }
+
+# Log progress summary after hashing
+$cached = ($HashResults | Where-Object { $_.CacheHit }).Count
+$hashed = ($HashResults | Where-Object { -not $_.CacheHit }).Count
+Write-Log "Hashing complete: $hashed hashed, $cached from cache." "INFO"
 
 # Update cache with any new/changed hashes and log newly hashed files
 foreach ($result in $HashResults) {
