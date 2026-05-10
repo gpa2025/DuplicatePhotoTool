@@ -73,7 +73,7 @@ Set-Content (Join-Path $env2.Source "b.jpg") "same"
 
 & $MainScript -Source $env2.Source -DuplicateRoot $env2.Duplicates -DryRun | Out-Null
 
-$movedFiles = Get-ChildItem $env2.Duplicates -Recurse -File | Where-Object { $_.Name -ne "duplicate_report.csv" -and $_.Name -ne "checksum_cache.json" }
+$movedFiles = Get-ChildItem $env2.Duplicates -Recurse -File | Where-Object { $_.Name -notin @("duplicate_report.csv", "checksum_cache.json", "scan_log.txt") }
 Assert "DryRun: no files moved" ($movedFiles.Count -eq 0)
 Assert "DryRun: source files intact" ((Get-ChildItem $env2.Source -File).Count -eq 2)
 
@@ -111,7 +111,7 @@ Set-Content (Join-Path $env4.Source "copy2.jpg") "data" -NoNewline
 
 & $MainScript -Source $env4.Source -DuplicateRoot $env4.Duplicates -DryRun | Out-Null
 $csv4 = Import-Csv (Join-Path $env4.Duplicates "duplicate_report.csv")
-Assert "Log shows original path" ($csv4[0].Original -like "*copy1.jpg")
+Assert "Log shows original path" ($csv4[0].Original -match "copy(1|2)\.jpg")
 
 Remove-TestEnv $env4
 

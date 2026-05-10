@@ -39,6 +39,8 @@ param(
     [string]$LogLevel = "INFO"
 )
 
+$LogFile = Join-Path $DuplicateRoot "scan_log.txt"
+
 # ============================
 # Utility Functions
 # ============================
@@ -50,6 +52,7 @@ function Write-Log {
     )
 
     $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+    $line = "[$timestamp] [$Level] $Message"
 
     if ($Level -eq "ERROR" -or
        ($Level -eq "WARN" -and $LogLevel -in "INFO","WARN") -or
@@ -61,7 +64,8 @@ function Write-Log {
             "ERROR" { "Red" }
         }
 
-        Write-Host "[$timestamp] [$Level] $Message" -ForegroundColor $color
+        Write-Host $line -ForegroundColor $color
+        Add-Content -Path $LogFile -Value $line
     }
 }
 
@@ -103,30 +107,39 @@ $CacheSnapshot = $ChecksumCache
 
 Write-Log "Using $ThrottleLimit core(s) for hashing." "INFO"
 
-$HashResults = $Files | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
-    $File  = $_
+# Split files into batches — one per core to avoid per-file runspace overhead
+$batchSize = [Math]::Ceiling($Files.Count / $ThrottleLimit)
+$batches = [System.Collections.Generic.List[object[]]]::new()
+for ($i = 0; $i -lt $Files.Count; $i += $batchSize) {
+    $end = [Math]::Min($i + $batchSize - 1, $Files.Count - 1)
+    $batches.Add($Files[$i..$end])
+}
+
+$HashResults = $batches | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
     $cache = $using:CacheSnapshot
-    $key   = $File.FullName
-    $hash  = $null
+    foreach ($File in $_) {
+        $key  = $File.FullName
+        $hash = $null
 
-    if ($cache.ContainsKey($key)) {
-        $entry = $cache[$key]
-        if ($entry.LastWriteTime -eq $File.LastWriteTimeUtc.ToString() -and
-            $entry.Length -eq $File.Length) {
-            $hash = $entry.Hash
+        if ($cache.ContainsKey($key)) {
+            $entry = $cache[$key]
+            if ($entry.LastWriteTime -eq $File.LastWriteTimeUtc.ToString() -and
+                $entry.Length -eq $File.Length) {
+                $hash = $entry.Hash
+            }
         }
-    }
 
-    if (-not $hash) {
-        $hash = (Get-FileHash -Path $File.FullName -Algorithm SHA256).Hash
-    }
+        if (-not $hash) {
+            $hash = (Get-FileHash -Path $File.FullName -Algorithm SHA256).Hash
+        }
 
-    [PSCustomObject]@{
-        Path          = $File.FullName
-        Hash          = $hash
-        LastWriteTime = $File.LastWriteTimeUtc.ToString()
-        Length        = $File.Length
-        CacheHit      = ($null -ne ($cache[$key]) -and $cache[$key].Hash -eq $hash)
+        [PSCustomObject]@{
+            Path          = $File.FullName
+            Hash          = $hash
+            LastWriteTime = $File.LastWriteTimeUtc.ToString()
+            Length        = $File.Length
+            CacheHit      = ($null -ne $cache[$key] -and $cache[$key].Hash -eq $hash)
+        }
     }
 }
 

@@ -152,11 +152,14 @@ $splashTimer.Start()
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <Button Name="RunButton" Grid.Column="0" Content="▶  Run Scan"
                         Height="44" Background="#0078D7" Foreground="White"
                         BorderThickness="0" FontSize="15" FontWeight="SemiBold"/>
-                <Border Grid.Column="1" Background="#1e293b" BorderBrush="#334155"
+                <Button Name="ViewLogButton" Grid.Column="1" Content="📋  View Log"
+                        Height="44" Margin="10,0,0,0" Padding="12,0"/>
+                <Border Grid.Column="2" Background="#1e293b" BorderBrush="#334155"
                         BorderThickness="1" CornerRadius="4" Margin="10,0,0,0" Padding="12,0">
                     <TextBlock Name="TimerLabel" Text="00:00" Foreground="#00d9ff"
                                FontSize="20" FontFamily="Consolas" FontWeight="Bold"
@@ -183,7 +186,6 @@ $splashTimer.Start()
 
 $Reader = New-Object System.Xml.XmlNodeReader $XAML
 $Window = [Windows.Markup.XamlReader]::Load($Reader)
-$Window.Visibility = "Hidden"
 
 $SourceBox       = $Window.FindName("SourceBox")
 $DuplicateBox    = $Window.FindName("DuplicateBox")
@@ -192,6 +194,7 @@ $BrowseDuplicate = $Window.FindName("BrowseDuplicate")
 $DryRunCheck     = $Window.FindName("DryRun")
 $CoresSlider     = $Window.FindName("CoresSlider")
 $CoresLabel      = $Window.FindName("CoresLabel")
+$ViewLogButton   = $Window.FindName("ViewLogButton")
 $RunButton       = $Window.FindName("RunButton")
 $TimerLabel      = $Window.FindName("TimerLabel")
 $StatusBar       = $Window.FindName("StatusBar")
@@ -264,6 +267,13 @@ $CoresSlider.Add_MouseLeave({
     $StatusBar.Text = "Ready."
 })
 
+$ViewLogButton.Add_MouseEnter({
+    $StatusBar.Text = "View Log: Opens the scan log for the selected output folder."
+})
+$ViewLogButton.Add_MouseLeave({
+    $StatusBar.Text = "Ready."
+})
+
 $RunButton.Add_MouseEnter({
     $StatusBar.Text = "Start scanning for duplicate photos using SHA256 hashing."
 })
@@ -274,6 +284,46 @@ $RunButton.Add_MouseLeave({
 # ============================
 # Button Events
 # ============================
+
+$ViewLogButton.Add_Click({
+    $dup = $DuplicateBox.Text.Trim()
+    $logPath = if ($dup) { Join-Path $dup "scan_log.txt" } else { $null }
+
+    if (-not $logPath -or -not (Test-Path $logPath)) {
+        $StatusBar.Text = "⚠ No log found. Run a scan first."
+        [System.Windows.MessageBox]::Show("No log file found. Run a scan first.", "No Log")
+        return
+    }
+
+    $logContent = Get-Content $logPath -Raw
+
+    [xml]$LogXAML = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        Title="Scan Log" Height="600" Width="900"
+        WindowStartupLocation="CenterScreen" Background="#0f172a">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBox Name="LogBox" Grid.Row="0" Margin="10" Padding="8"
+                 Background="#0f172a" Foreground="#94a3b8" FontFamily="Consolas"
+                 FontSize="12" IsReadOnly="True" VerticalScrollBarVisibility="Auto"
+                 HorizontalScrollBarVisibility="Auto" TextWrapping="NoWrap"
+                 BorderThickness="0"/>
+        <Button Name="CloseBtn" Grid.Row="1" Content="Close" Margin="10"
+                Height="36" Background="#1e293b" Foreground="#00d9ff"
+                BorderBrush="#334155" BorderThickness="1" FontSize="13"/>
+    </Grid>
+</Window>
+"@
+    $logReader = New-Object System.Xml.XmlNodeReader $LogXAML
+    $logWindow = [Windows.Markup.XamlReader]::Load($logReader)
+    $logWindow.FindName("LogBox").Text = $logContent
+    $logWindow.FindName("CloseBtn").Add_Click({ $logWindow.Close() })
+    $logWindow.ShowDialog() | Out-Null
+    $StatusBar.Text = "Ready."
+})
 
 $BrowseSource.Add_Click({
     $path = Select-Folder
@@ -358,8 +408,24 @@ $RunButton.Add_Click({
 })
 
 # ============================
-# Show Window (splash timer will call $Window.Show())
+# Show Splash then Main Window
 # ============================
 
-$Window.Add_Closed({ [System.Windows.Application]::Current.Shutdown() })
-[System.Windows.Application]::new().Run($Splash)
+$script:splashValue = 0
+$splashTimer = New-Object System.Windows.Threading.DispatcherTimer
+$splashTimer.Interval = [TimeSpan]::FromMilliseconds(30)
+$splashTimer.Add_Tick({
+    $script:splashValue += 3
+    $SplashProgress.Value = $script:splashValue
+    if ($script:splashValue -ge 100) {
+        $splashTimer.Stop()
+        $Splash.Close()
+        $Window.ShowDialog() | Out-Null
+    }
+})
+
+$Splash.Show()
+$splashTimer.Start()
+
+# Run the dispatcher loop to process splash timer ticks
+[System.Windows.Threading.Dispatcher]::Run()
