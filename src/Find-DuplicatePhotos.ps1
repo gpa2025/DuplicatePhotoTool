@@ -63,6 +63,12 @@ function Write-Log {
 }
 
 # ============================
+# Start Timer
+# ============================
+
+$Timer = [System.Diagnostics.Stopwatch]::StartNew()
+
+# ============================
 # Load or Create Checksum Cache
 # ============================
 
@@ -180,4 +186,13 @@ $CsvPath = Join-Path $DuplicateRoot "duplicate_report.csv"
 $Report | Export-Csv -Path $CsvPath -NoTypeInformation
 
 Write-Log "Report saved to $CsvPath" "INFO"
-Write-Log "Done." "INFO"
+
+$Timer.Stop()
+$elapsed = $Timer.Elapsed
+$elapsedStr = if ($elapsed.TotalMinutes -ge 1) {
+    "{0}m {1}s" -f [int]$elapsed.TotalMinutes, $elapsed.Seconds
+} else {
+    "{0:N1}s" -f $elapsed.TotalSeconds
+}
+
+Write-Log "Scan complete in $elapsedStr. $($Groups.Count) duplicate group(s) found, $($Report.Count) file(s) processed." "INFO"
