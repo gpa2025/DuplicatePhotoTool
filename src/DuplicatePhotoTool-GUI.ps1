@@ -10,9 +10,9 @@ if (-not $Version) { $Version = "1.0.0" }
 
 [xml]$SplashXAML = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        WindowStyle="None" AllowsTransparency="False" Background="#0f172a"
         Width="420" Height="220" WindowStartupLocation="CenterScreen" Topmost="True">
-    <Border CornerRadius="16" Background="#0f172a" BorderBrush="#00d9ff" BorderThickness="1.5">
+    <Border Background="#0f172a" BorderBrush="#00d9ff" BorderThickness="1.5">
         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="30">
             <TextBlock Text="GPA Solutions" FontSize="13" Foreground="#00d9ff"
                        HorizontalAlignment="Center" Margin="0,0,0,4" FontWeight="SemiBold"/>
@@ -35,16 +35,22 @@ $Splash = [Windows.Markup.XamlReader]::Load($SplashReader)
 $Splash.FindName("SplashVersion").Text = "v$Version"
 $SplashProgress = $Splash.FindName("SplashProgress")
 
+# Use DispatcherTimer to animate splash without blocking
+$splashTimer = New-Object System.Windows.Threading.DispatcherTimer
+$splashTimer.Interval = [TimeSpan]::FromMilliseconds(30)
+$script:splashValue = 0
+$splashTimer.Add_Tick({
+    $script:splashValue += 3
+    $SplashProgress.Value = $script:splashValue
+    if ($script:splashValue -ge 100) {
+        $splashTimer.Stop()
+        $Splash.Close()
+        $Window.Show()
+    }
+})
+
 $Splash.Show()
-
-# Animate progress bar over 1.8 seconds
-for ($i = 0; $i -le 100; $i += 5) {
-    $SplashProgress.Value = $i
-    $Splash.Dispatcher.Invoke([action]{}, [System.Windows.Threading.DispatcherPriority]::Background)
-    Start-Sleep -Milliseconds 90
-}
-
-$Splash.Close()
+$splashTimer.Start()
 
 # ============================
 # Main Window XAML
@@ -177,6 +183,7 @@ $Splash.Close()
 
 $Reader = New-Object System.Xml.XmlNodeReader $XAML
 $Window = [Windows.Markup.XamlReader]::Load($Reader)
+$Window.Visibility = "Hidden"
 
 $SourceBox       = $Window.FindName("SourceBox")
 $DuplicateBox    = $Window.FindName("DuplicateBox")
@@ -351,7 +358,8 @@ $RunButton.Add_Click({
 })
 
 # ============================
-# Show Window
+# Show Window (splash timer will call $Window.Show())
 # ============================
 
-$Window.ShowDialog() | Out-Null
+$Window.Add_Closed({ [System.Windows.Application]::Current.Shutdown() })
+[System.Windows.Application]::new().Run($Splash)
