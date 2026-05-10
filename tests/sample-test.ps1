@@ -73,7 +73,7 @@ Set-Content (Join-Path $env2.Source "b.jpg") "same"
 
 & $MainScript -Source $env2.Source -DuplicateRoot $env2.Duplicates -DryRun | Out-Null
 
-$movedFiles = Get-ChildItem $env2.Duplicates -Recurse -File | Where-Object { $_.Name -notin @("duplicate_report.csv", "checksum_cache.json", "scan_log.txt") }
+$movedFiles = Get-ChildItem $env2.Duplicates -Recurse -File | Where-Object { $_.Name -notmatch '^(duplicate_report\.csv|checksum_cache\.json|scan_log_.*\.txt)$' }
 Assert "DryRun: no files moved" ($movedFiles.Count -eq 0)
 Assert "DryRun: source files intact" ((Get-ChildItem $env2.Source -File).Count -eq 2)
 

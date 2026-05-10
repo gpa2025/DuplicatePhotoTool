@@ -287,7 +287,10 @@ $RunButton.Add_MouseLeave({
 
 $ViewLogButton.Add_Click({
     $dup = $DuplicateBox.Text.Trim()
-    $logPath = if ($dup) { Join-Path $dup "scan_log.txt" } else { $null }
+    $logPath = if ($dup) {
+        Get-ChildItem -Path $dup -Filter "scan_log_*.txt" -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
+    } else { $null }
 
     if (-not $logPath -or -not (Test-Path $logPath)) {
         $StatusBar.Text = "⚠ No log found. Run a scan first."

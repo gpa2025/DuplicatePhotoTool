@@ -39,7 +39,7 @@ param(
     [string]$LogLevel = "INFO"
 )
 
-$LogFile = Join-Path $DuplicateRoot "scan_log.txt"
+$LogFile = Join-Path $DuplicateRoot ("scan_log_" + (Get-Date -Format "yyyy-MM-dd_HH-mm-ss") + ".txt")
 
 # ============================
 # Utility Functions
