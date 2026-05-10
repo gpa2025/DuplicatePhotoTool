@@ -156,6 +156,12 @@ foreach ($Group in $Groups) {
 
     foreach ($Dup in $Duplicates) {
 
+        # Safety check — never move the original
+        if ([System.IO.Path]::GetFullPath($Dup.Path) -eq [System.IO.Path]::GetFullPath($Original)) {
+            Write-Log "Skipping original: $($Dup.Path)" "WARN"
+            continue
+        }
+
         $relative = [System.IO.Path]::GetRelativePath($Source, $Dup.Path)
         $dest = Join-Path $DuplicateRoot $relative
         $destDir = Split-Path $dest -Parent
@@ -165,10 +171,10 @@ foreach ($Group in $Groups) {
         }
 
         if ($DryRun) {
-            Write-Log "[DryRun] Would move: $($Dup.Path) → $dest" "WARN"
+            Write-Log "[DryRun] Would move: $($Dup.Path) → $dest (original kept: $Original)" "WARN"
         } else {
             Move-Item -Path $Dup.Path -Destination $dest -Force
-            Write-Log "Moved duplicate: $($Dup.Path) → $dest" "INFO"
+            Write-Log "Moved duplicate: $($Dup.Path) → $dest (original kept: $Original)" "INFO"
         }
 
         $Report += [PSCustomObject]@{
