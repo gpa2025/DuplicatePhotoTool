@@ -285,4 +285,4 @@ if (-not (Test-Path $IconPathIco)) {
     Write-Host ""
 }
 
-$null = Read-Host "Press Enter to exit"
+
