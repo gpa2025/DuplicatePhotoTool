@@ -36,7 +36,10 @@ param(
     [int]$ThrottleLimit = 4,
 
     [ValidateSet("INFO","WARN","ERROR")]
-    [string]$LogLevel = "INFO"
+    [string]$LogLevel = "INFO",
+
+    [ValidateSet("First","Newest","Largest")]
+    [string]$SelectionMode = "First"
 )
 
 $LogFile = Join-Path $DuplicateRoot ("scan_log_" + (Get-Date -Format "yyyy-MM-dd_HH-mm-ss") + ".txt")
@@ -212,13 +215,19 @@ $Report = @()
 
 foreach ($Group in $Groups) {
 
-    # Sort group by path for deterministic original selection
+    # Sort group based on SelectionMode
     # Prefer files inside $Source over files inside $DuplicateRoot
     $sorted = $Group.Group | Sort-Object {
         $p = $_.Path
         # Files inside DuplicateRoot are always duplicates, never originals
         if ($p.StartsWith($DuplicateRoot, [System.StringComparison]::OrdinalIgnoreCase)) { 1 } else { 0 }
-    }, { $_.Path }
+    }, {
+        switch ($SelectionMode) {
+            "First"   { $_.Path }
+            "Newest"  { [DateTime]::Parse($_.LastWriteTime) }
+            "Largest" { $_.Length }
+        }
+    } -Descending:($SelectionMode -eq "Newest" -or $SelectionMode -eq "Largest")
 
     $Original = $sorted[0].Path
 
@@ -288,8 +297,9 @@ $scanDoc["duplicateGroups"]= [LiteDB.BsonValue]::new([int]$Groups.Count)
 $scanDoc["filesMoved"]     = [LiteDB.BsonValue]::new([int]$Report.Count)
 $scanDoc["elapsedSeconds"] = [LiteDB.BsonValue]::new([double]$elapsed.TotalSeconds)
 $scanDoc["dryRun"]         = [LiteDB.BsonValue]::new([bool]$DryRun)
+$scanDoc["selectionMode"]  = [LiteDB.BsonValue]::new($SelectionMode)
 $colScans.Insert($scanDoc) | Out-Null
 
 $db.Dispose()
 
-Write-Log "Scan complete in $elapsedStr. $($Groups.Count) duplicate group(s) found, $($Report.Count) file(s) processed." "INFO"
+Write-Log "Scan complete in $elapsedStr. $($Groups.Count) duplicate group(s) found, $($Report.Count) file(s) processed. Original selection: $SelectionMode." "INFO"
